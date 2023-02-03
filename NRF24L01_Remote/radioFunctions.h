@@ -13,12 +13,6 @@ void transmit(char* message);
 //recieve ECC transmission. Returns 0 on success, 1 on timeout
 int recieve(unsigned long timeout); 
 
-//gets address from EEPROM, otherwise sets them to default
-void getAddress();
-
-//sets channel from EEPROM if enabled, otherwise sets them to default
-void setAddress();
-
 //local msg variable getter
 char* getMsg();
 

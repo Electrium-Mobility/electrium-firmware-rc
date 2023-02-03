@@ -7,7 +7,7 @@
 #include "radioFunctions.h"
 #include "RS-FEC.h"
 #include "RF24.h"
-#include <EEPROM.h>
+#include "dataStorage.h"
 
 
 RF24 radio(CE_PIN, CSN_PIN);
@@ -27,7 +27,11 @@ void radio_setup(){
   #endif
 
   //get the radio transmit address (not channel, channel will be hard-coded in settings.h)
-  getAddress();
+  uint8_t *addr = getAddress();
+  memcpy(r_address, addr, 5);
+  memcpy(w_address, addr, 5);
+  w_address[4] ^= 1; //flip the last bit
+  free(addr);
 
   //NRF initialization
   radio.begin(); // Start up the radio
@@ -105,68 +109,6 @@ int recieve(unsigned long timeout){
     }
   } while (millis() < start + timeout);
   return 1;
-}
-
-void getAddress(){
-  //EEPROM layout:               [if enabled]
-  // isSet(0)    address(1..5)    channel(6) 
-  //   0x0*    0x** ** ** ** **     0x**
-
-  //Check if the EEPROM has a saved address
-  byte isSet = EEPROM.read(0);
-  //If there is a saved address, read it
-  if (isSet){
-    //Read the 5 address bytes
-    for(byte i=0;i<5;i++)
-      r_address[i] = EEPROM.read(i+1);
-    
-    //Check if the read address is stored correctly. Shouldn't really ever happen unless EEPROM dies
-    #ifdef REMOTE  //read address LSB = 0, write address LSB = 1
-    if(r_address[4] & 1 == 1){
-      #ifdef DEBUG 
-      Serial.println("Remote read address ends in 1, is EEPROM corrupted?");
-      Serial.print("Address stored: ");
-      for(size_t i=0;i<5;i++) Serial.print(r_address[i], HEX);
-      Serial.println();
-      #endif
-      r_address[4] -= 1;
-    }
-
-    #elif defined(CONTROLLER) //read address LSB = 1, write address LSB = 0
-    if(r_address[4] & 1 == 0){
-      #ifdef DEBUG 
-      Serial.println("Remote read address ends in 0, is EEPROM corrupted?");
-      Serial.print("Address stored: ");
-      for(size_t i=0;i<5;i++) Serial.print(r_address[i], HEX);
-      Serial.println();
-      #endif
-      r_address[4] += 1;
-    }
-    #endif
-
-  }
-
-  //if EEPROM not set, just set r_address to the lowest unsigned value as a default
-  else{
-    memset(r_address, 0, 5);
-    EEPROM.write(1, 0);
-    EEPROM.write(2, 0);
-    EEPROM.write(3, 0);
-    EEPROM.write(4, 0);
-    #ifdef REMOTE
-    EEPROM.write(5, 0);
-    #else
-    EEPROM.write(5, 1);
-    #endif
-  }
-
-  // set the write address
-  memcpy(w_address,r_address,5);
-  #ifdef REMOTE
-  w_address[4] += 1;
-  #else
-  w_address[4] -= 1;
-  #endif
 }
 
 char* getMsg(){

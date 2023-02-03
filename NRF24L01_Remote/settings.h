@@ -31,7 +31,8 @@
 /****************************************************************************/
 
 // Have error correction or just do error detection and retransmit
-#define ENABLE_ERROR_CORRECTION
+// Uses ~6118 bytes progmem and 127 bytes of dynamic memory
+#define ENABLE_ERROR_CORRECTION 
 
 // Error correction and message settings. 
 #define MAX_MESSAGE_LENGTH 6      //min 5 if CHANNEL is disabled, 6 if CHANNEL is enabled

@@ -4,6 +4,24 @@
 // Controller: RF module on the main device (ESC)
 // Remote: Handheld RF module 
 
+//IO settings:
+//Power switch and function button
+//  Power on with function down
+//    Enter config screen, current pot setting set as middle with +-10% deadzone
+//    Throttle moves up/down in setting, doesnt move again till throttle is reset
+//    Press config button again to select option to change, press again to exit
+//    Options:
+//      Pair
+//      Configure throttle range (sets high, middle, low)
+//      Configure wheel diameter
+//      Max throttle percentage
+//      Max brake percentage
+//Power switch and no function button
+//   Regular operation
+//   If no response after 10 seconds, vibrate to indicate no connection
+//   to reverse, hold function button, will vibrate to indicate switch
+//   If no battery level response from controller after 5 retries, start vibrate to tell signal lost
+
 //pair feature:
 // set to address: 0 p a i r    which is    0x 00 50 41 49 52
 // controller randomly generates new address
@@ -24,7 +42,6 @@
 #include "settings.h"
 
 char transmit_msg[MAX_MESSAGE_LENGTH];
-int counter;
 char* resp;
 
 void setup() {
@@ -38,6 +55,5 @@ void loop(void){
   if(recieve(1000)){
     printMsg();
   }
-  counter++;
 }
 
