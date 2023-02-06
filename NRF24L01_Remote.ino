@@ -52,7 +52,7 @@ void setup() {
 void loop(void){
   itoa(analogRead(A0),transmit_msg,10);
   transmit(transmit_msg);
-  if(recieve(1000)){
+  if(recieve(100)){
     printMsg();
   }
 }
