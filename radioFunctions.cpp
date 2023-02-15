@@ -1,7 +1,6 @@
 //Reference document: https://maniacbug.github.io/RF24/classRF24.html
 //Made by: Winston Lu 
-//Last updated: 2023/1/31
-
+//Last updated: 2023/2/15
 #include "HardwareSerial.h"
 #include "settings.h"
 #include "radioFunctions.h"
@@ -59,11 +58,13 @@ void radioSetupSwitch(){
     }
     Serial.println(" Switch done.");
   #endif
+
   //close the original reading pipe and open the new one stored in EEPROM, since
   //otherwise it would open another reading pipe, which other pair requests may interfere
   //  with regular operations of another controller if not closed
   radio.closeReadingPipe(pipeChannel);
   radio.openReadingPipe(pipeChannel, r_address); 
+
   //stop the write address and change the pipe to the new address. 
   //No need to close the pipe since there can only be 1 write pipe
   radio.stopListening();

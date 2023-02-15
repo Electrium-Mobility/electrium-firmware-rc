@@ -1,3 +1,5 @@
+//Made by: Winston Lu 
+//Last updated: 2023/2/15
 #include "settings.h"
 #include "dataStorage.h"
 #include <EEPROM.h>
