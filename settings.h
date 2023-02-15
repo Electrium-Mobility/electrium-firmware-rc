@@ -8,6 +8,7 @@
 
 //Enable debug through serial. Controllers like the ATTiny have no hardware serial
 #define DEBUG
+#define FAILURE_HANDLING
 
 // NRF pins
 #define CE_PIN 9
@@ -23,13 +24,15 @@
 //#define CHANNEL 1
 
 //Which device is this on?
-// #define CONTROLLER
-#define REMOTE
+#define CONTROLLER
+// #define REMOTE
 
 //For how long should the controller check if there is a pair request before it resumes normal operation?
 #define PAIR_WAIT 5000         //in milliseconds
 //How long to keep trying to pair before exiting
 #define PAIR_DURATION 30000   //in milliseconds
+//Pair retries. Sometimes >4 tries are needed before it successfully pairs
+#define PAIR_RETRIES 10
 
 /****************************************************************************/
 /**** THE BELOW SETTINGS SHOULD BE THE SAME ON THE CONTROLLER AND REMOTE ****/

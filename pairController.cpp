@@ -32,13 +32,13 @@ void pairController(){
                             ((uint32_t) msg[2] << 16) + 
                             ((uint32_t) msg[3] << 8)  + 
                                         msg[4]         );
-                for(uint8_t i=0;i<5;i++)
+                for(uint8_t i=0 ; i < 5 ; i++)
                     newAddr[i] = random(256) ^ (start % 255);
 
                 delay(100); //wait for the remote to start listening
                 //if successfully sends new address, save it
                 bool saved = false;
-                for(int i=0;i<5;i++){
+                for(int i=0 ; i < PAIR_RETRIES ; i++){
                   if (transmit((char*) newAddr)){
                       #ifdef DEBUG
                       Serial.print("Controller set address to: ");
@@ -51,7 +51,7 @@ void pairController(){
                   }
                   else{
                     Serial.println("Failed pairing, retrying...");
-                    delay(50);
+                    delay(100);
                     continue; //otherwise retry
                   }
                 }
