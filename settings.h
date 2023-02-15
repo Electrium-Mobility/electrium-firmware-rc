@@ -35,15 +35,8 @@
 /**** THE BELOW SETTINGS SHOULD BE THE SAME ON THE CONTROLLER AND REMOTE ****/
 /****************************************************************************/
 
-// Have error correction or just do error detection and retransmit
-// Uses ~6118 bytes progmem and 127 bytes of dynamic memory
-#define ENABLE_ERROR_CORRECTION 
-
 // Error correction and message settings. 
 #define MAX_MESSAGE_LENGTH 6      //min 5 if CHANNEL is disabled, 6 if CHANNEL is enabled
-#define ECC_LENGTH 4              //max correction: ECC_LENGTH/2
-
-
 
 // Data transfer speeds
 // Options: RF24_250KBPS | RF24_1MBPS | RF24_2MBPS
@@ -54,14 +47,6 @@
 
 //You can change this from 0-5, but theres no reason to. This is just to not hard-code in a pipe
 #define PIPE_CHANNEL 1
-
-
-// Calculations and sanity checks to check if we have a invalid configuration
-#ifdef ENABLE_ERROR_CORRECTION
-  #define TOTAL_LENGTH MAX_MESSAGE_LENGTH + ECC_LENGTH
-#else 
-  #define TOTAL_LENGTH MAX_MESSAGE_LENGTH
-#endif
 
 #if !( defined(REMOTE) ^ defined(CONTROLLER))
   #error "You must specify if the radio module is attached to the controller or the remote"

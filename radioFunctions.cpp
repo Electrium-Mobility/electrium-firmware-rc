@@ -5,15 +5,11 @@
 #include "HardwareSerial.h"
 #include "settings.h"
 #include "radioFunctions.h"
-#include "RS-FEC.h"
 #include "RF24.h"
 #include "dataStorage.h"
 
 
 RF24 radio(CE_PIN, CSN_PIN);
-#ifdef ENABLE_ERROR_CORRECTION
-RS::ReedSolomon<MAX_MESSAGE_LENGTH, ECC_LENGTH> rs;
-#endif
 
 // Addresses are a 5 byte field.
 uint8_t pipeChannel = PIPE_CHANNEL; //cant be const or #define cause they want an address pointer
@@ -88,12 +84,6 @@ bool transmit(char* message){
   memcpy(msg,message,MAX_MESSAGE_LENGTH);
   #endif
 
-  //Encode message if error correction is enabled, otherwise just send
-  #ifdef ENABLE_ERROR_CORRECTION
-  char *encoded = (char*) malloc(TOTAL_LENGTH);
-  rs.Encode(message, encoded); 
-  #endif
-
   //print out the hex message once sent
   #ifdef DEBUG
     Serial.print("Sending to address: ");
@@ -102,35 +92,23 @@ bool transmit(char* message){
       Serial.print(" ");
     }
     Serial.print(" payload: ");
-    for(size_t i=0;i<TOTAL_LENGTH;i++){
+    for(size_t i=0;i<MAX_MESSAGE_LENGTH;i++){
       _printHex(message[i]);
       Serial.print(" ");
     }
     Serial.println();
   #endif
   
-  #ifdef ENABLE_ERROR_CORRECTION
-  return radio.write(encoded, TOTAL_LENGTH);
-  #else
-  return radio.write(message, TOTAL_LENGTH);
-  #endif
-
-  free(encoded);
+  return radio.write(message, MAX_MESSAGE_LENGTH);
 }
 
 int recieve(unsigned long timeout){
-  char buffer[TOTAL_LENGTH];
   unsigned long start = millis();
   radio.stopListening();
   radio.startListening();
   do{
     if(radio.available(&pipeChannel)){
-      #ifdef ENABLE_ERROR_CORRECTION
-      radio.read( buffer, TOTAL_LENGTH );
-      rs.Decode(buffer, msg);
-      #else 
-      radio.read( msg, TOTAL_LENGTH );
-      #endif
+      radio.read( msg, MAX_MESSAGE_LENGTH );
 
       #ifdef DEBUG
       Serial.print("Recieved on address: ");
@@ -203,12 +181,6 @@ void _initNRF(){
   radio.setRetries(15,15); // Max delay between retries & number of retries
   radio.openWritingPipe(w_address); 
   radio.openReadingPipe(pipeChannel, r_address); 
-
-  //CRC will fail if theres a correctable error (and also incorrectable errors)
-  //   so disable CRC and roll with any corrupt data hoping its correctable
-  #ifdef ENABLE_ERROR_CORRECTION
-  radio.disableCRC(); 
-  #endif
   
   //If we defined a 2.4GHz channel, set it to that. By default I believe its 0 if we don't set it
   #ifdef CHANNEL
