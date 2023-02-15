@@ -40,5 +40,28 @@ in the downmost position
 | 0xff   | 5 bytes     | Pairing request     | Pseudorandom seed         | Remote -> Controller |
 
 ### Pairing handshake
-
+```mermaid
+sequenceDiagram
+    activate Remote
+    Note left of Remote: Pair Request Start
+    activate Controller
+    Note right of Controller: Controller power on
+    deactivate Controller
+    loop For 30 seconds or until ACK
+        loop Repeat until ACK
+            Remote->>+Controller: Pair request with PRNG seed
+        end
+        deactivate Remote
+        Controller->>Remote: Pair request ACK
+        activate Controller
+        loop 10 times or until ACK
+            Controller->>Remote: Send new base address
+            deactivate Controller
+        end
+            Remote->>Controller: New address ACK
+        Note right of Remote: Addresses saved in EEPROM
+        Remote-->Controller: 
+        Remote-->Controller: Regular operations
+    end
+```
 
