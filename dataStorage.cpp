@@ -63,7 +63,7 @@ uint8_t* getAddress(){
   else{
     memset(addr, 0, 5);
     #ifdef CONTROLLER
-    addr[4] = 1;
+    addr[4] ^= 1;
     #endif
   }
   return addr;
@@ -79,12 +79,10 @@ void saveAddress(uint8_t *addr){
 
   //save read address, force the bit convention
   #ifdef REMOTE  //read address LSB = 0, write address LSB = 1
-    EEPROM.write(ADDRESS_OFFSET+4, addr[4] & 0);
+    EEPROM.write(ADDRESS_OFFSET+4, addr[4] & 0b11111110);
   #elif defined(CONTROLLER) //read address LSB = 1, write address LSB = 0
     EEPROM.write(ADDRESS_OFFSET+4, addr[4] | 1);
   #endif
-
-  free(addr);
 }
 
 //no defaults, so we just give whatever is there
@@ -112,7 +110,7 @@ void saveJoystickCalibration(uint8_t max, uint8_t mid, uint8_t min){
 }
 
 uint16_t getWheelDiameter(){
-  return (uint16_t) ( ( isInitialized(WHEEL_DIAMETER_BIT) ) ? EEPROM.read(WHEEL_DIAMETER_OFFSET) << 8 + EEPROM.read(WHEEL_DIAMETER_OFFSET+1) : 90);
+  return (uint16_t) ( ( isInitialized(WHEEL_DIAMETER_BIT) ) ? (EEPROM.read(WHEEL_DIAMETER_OFFSET) << 8) + EEPROM.read(WHEEL_DIAMETER_OFFSET+1) : 90);
 }
 
 uint8_t getMaxThrottle(){

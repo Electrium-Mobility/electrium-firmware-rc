@@ -26,6 +26,11 @@
 // #define CONTROLLER
 #define REMOTE
 
+//For how long should the controller check if there is a pair request before it resumes normal operation?
+#define PAIR_WAIT 5000         //in milliseconds
+//How long to keep trying to pair before exiting
+#define PAIR_DURATION 30000   //in milliseconds
+
 /****************************************************************************/
 /**** THE BELOW SETTINGS SHOULD BE THE SAME ON THE CONTROLLER AND REMOTE ****/
 /****************************************************************************/
@@ -45,8 +50,13 @@
 #define DATA_RATE RF24_250KBPS
 
 
-//Dont touch the code below, they're just calculations and sanity checks to check if we 
-//    have a invalid configuration
+//********************** Dont touch the code below ********************************//
+
+//You can change this from 0-5, but theres no reason to. This is just to not hard-code in a pipe
+#define PIPE_CHANNEL 1
+
+
+// Calculations and sanity checks to check if we have a invalid configuration
 #ifdef ENABLE_ERROR_CORRECTION
   #define TOTAL_LENGTH MAX_MESSAGE_LENGTH + ECC_LENGTH
 #else 

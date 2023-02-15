@@ -16,22 +16,184 @@ RS::ReedSolomon<MAX_MESSAGE_LENGTH, ECC_LENGTH> rs;
 #endif
 
 // Addresses are a 5 byte field.
+uint8_t pipeChannel = PIPE_CHANNEL; //cant be const or #define cause they want an address pointer
 uint8_t r_address[5]; //address for reading
 uint8_t w_address[5]; //address for writing
-uint8_t pipe_channel = 1;
 char msg[MAX_MESSAGE_LENGTH];
 
-void radio_setup(){
-  #ifdef DEBUG
-  Serial.begin(115200); while (!Serial);
-  #endif
-
+void radioSetup(){
   //get the radio transmit address (not channel, channel will be hard-coded in settings.h)
   uint8_t *addr = getAddress();
   memcpy(r_address, addr, 5);
   memcpy(w_address, addr, 5);
   w_address[4] ^= 1; //flip the last bit
   free(addr);
+
+  _initNRF();
+}
+
+void radioSetupPair(){
+  uint8_t addr[5] = {'P','A','I','R', 0};
+  #ifdef CONTROLLER
+  addr[4] = 1;
+  #endif
+  memcpy(r_address, addr, 5);
+  memcpy(w_address, addr, 5);
+  w_address[4] ^= 1; //flip the last bit
+
+  _initNRF();
+}
+
+void radioSetupSwitch(){
+  uint8_t *addr = getAddress();
+  memcpy(r_address, addr, 5);
+  memcpy(w_address, addr, 5);
+  w_address[4] ^= 1; //flip the last bit
+  free(addr);
+  #ifdef DEBUG
+    Serial.print("Switching read address to: ");
+    for(size_t i=0;i<5;i++){
+      _printHex(r_address[i]);
+      Serial.print(" ");
+    }
+    Serial.print("Switching write address to: ");
+    for(size_t i=0;i<5;i++){
+      _printHex(w_address[i]);
+      Serial.print(" ");
+    }
+    Serial.println(" Switch done.");
+  #endif
+  //close the original reading pipe and open the new one stored in EEPROM, since
+  //otherwise it would open another reading pipe, which other pair requests may interfere
+  //  with regular operations of another controller if not closed
+  radio.closeReadingPipe(pipeChannel);
+  radio.openReadingPipe(pipeChannel, r_address); 
+  //stop the write address and change the pipe to the new address. 
+  //No need to close the pipe since there can only be 1 write pipe
+  radio.stopListening();
+  radio.openWritingPipe(w_address); 
+}
+
+void stopRadio(){
+  radio.closeReadingPipe(PIPE_CHANNEL);
+  radio.stopListening();
+}
+
+bool transmit(char* message){
+  //Stop listening and get ready to transmit
+  radio.stopListening();
+
+  //Store into global variable if needed to print out later
+  #ifdef DEBUG
+  memcpy(msg,message,MAX_MESSAGE_LENGTH);
+  #endif
+
+  //Encode message if error correction is enabled, otherwise just send
+  #ifdef ENABLE_ERROR_CORRECTION
+  char *encoded = (char*) malloc(TOTAL_LENGTH);
+  rs.Encode(message, encoded); 
+  #endif
+
+  //print out the hex message once sent
+  #ifdef DEBUG
+    Serial.print("Sending to address: ");
+    for(size_t i=0;i<5;i++){
+      _printHex(w_address[i]);
+      Serial.print(" ");
+    }
+    Serial.print(" payload: ");
+    for(size_t i=0;i<TOTAL_LENGTH;i++){
+      _printHex(message[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+  #endif
+  
+  #ifdef ENABLE_ERROR_CORRECTION
+  return radio.write(encoded, TOTAL_LENGTH);
+  #else
+  return radio.write(message, TOTAL_LENGTH);
+  #endif
+
+  free(encoded);
+}
+
+int recieve(unsigned long timeout){
+  char buffer[TOTAL_LENGTH];
+  unsigned long start = millis();
+  radio.stopListening();
+  radio.startListening();
+  do{
+    if(radio.available(&pipeChannel)){
+      #ifdef ENABLE_ERROR_CORRECTION
+      radio.read( buffer, TOTAL_LENGTH );
+      rs.Decode(buffer, msg);
+      #else 
+      radio.read( msg, TOTAL_LENGTH );
+      #endif
+
+      #ifdef DEBUG
+      Serial.print("Recieved on address: ");
+      for(size_t i=0;i<5;i++){
+        _printHex(r_address[i]);
+        Serial.print(" ");
+      }
+      Serial.print(" contents: ");
+      for(size_t i=0;i<MAX_MESSAGE_LENGTH;i++){
+        _printHex(msg[i]);
+        Serial.print(" ");
+      }
+      Serial.println();
+      #endif
+      return 1;
+    }
+  } while (millis() < start + timeout);
+  return 0;
+}
+
+char* getMsg(){
+  return msg;
+}
+
+void printMsg(){
+  #ifdef DEBUG
+  printMsg(MAX_MESSAGE_LENGTH);
+  #endif
+}
+
+void printMsg(int numBytes){
+  #ifdef DEBUG
+    Serial.print("Msg: ");
+    for(int i=0;i<numBytes;i++){
+      if(msg[i] == 0) break; //dont print out the square null bytes
+      Serial.print(msg[i]);
+    }
+    Serial.println();
+    Serial.print("Hex: ");
+    for(int i=0;i<numBytes;i++){
+      _printHex(msg[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+  #endif
+}
+
+void _initNRF(){
+  //Debug Addresses
+  #ifdef DEBUG
+    Serial.begin(115200); while (!Serial);
+    Serial.print("Setting read address to: ");
+    for(size_t i=0;i<5;i++){
+      _printHex(r_address[i]);
+      Serial.print(" ");
+    }
+    Serial.print("Setting write address to: ");
+    for(size_t i=0;i<5;i++){
+      _printHex(w_address[i]);
+      Serial.print(" ");
+    }
+    Serial.println(" Init done.");
+  #endif
 
   //NRF initialization
   radio.begin(); // Start up the radio
@@ -40,7 +202,7 @@ void radio_setup(){
   radio.setAutoAck(1); // Enable auto-acknowledge
   radio.setRetries(15,15); // Max delay between retries & number of retries
   radio.openWritingPipe(w_address); 
-  radio.openReadingPipe(pipe_channel, r_address); 
+  radio.openReadingPipe(pipeChannel, r_address); 
 
   //CRC will fail if theres a correctable error (and also incorrectable errors)
   //   so disable CRC and roll with any corrupt data hoping its correctable
@@ -52,90 +214,16 @@ void radio_setup(){
   #ifdef CHANNEL
   radio.setChannel(CHANNEL);
   #endif
+
 }
 
-void transmit(char* message){
-  //Stop listening and get ready to transmit
-  radio.stopListening();
-
-  //Store into global variable if needed to print out later
-  #ifdef DEBUG
-  memcpy(msg,message,MAX_MESSAGE_LENGTH);
-  #endif
-
-  //Encode message if error correction is enabled, otherwise just send
-  #ifdef ENABLE_ERROR_CORRECTION
-  char encoded[TOTAL_LENGTH];
-  rs.Encode(message, encoded); 
-  radio.write(encoded, TOTAL_LENGTH);
-  #else
-  radio.write(message, TOTAL_LENGTH);
-  #endif
-
-  //print out the hex message once sent
-  #ifdef DEBUG
-    Serial.print("Sent payload hex: ");
-    for(size_t i=0;i<TOTAL_LENGTH;i++){
-      #ifdef ENABLE_ERROR_CORRECTION 
-      _print_hex(encoded[i]);
-      #else 
-      _print_hex(message[i]);
-      #endif
-      Serial.print(" ");
-    }
-    Serial.println();
-  #endif
-}
-
-int recieve(unsigned long timeout){
-  char buffer[TOTAL_LENGTH];
-  unsigned long start = millis();
-  radio.stopListening();
-  radio.startListening();
-  do{
-    if(radio.available(&pipe_channel)){
-      #ifdef ENABLE_ERROR_CORRECTION
-      radio.read( buffer, TOTAL_LENGTH );
-      rs.Decode(buffer, msg);
-      #else 
-      radio.read( msg, TOTAL_LENGTH );
-      #endif
-
-      #ifdef DEBUG
-      Serial.print("Got Payload ");
-      Serial.println(msg);
-      #endif
-      return 0;
-    }
-  } while (millis() < start + timeout);
-  return 1;
-}
-
-char* getMsg(){
-  return msg;
-}
-
-void printMsg(){
-  #ifdef DEBUG
-    Serial.print("Msg: ");
-    for(size_t i=0;i<MAX_MESSAGE_LENGTH;i++){
-      if(msg[i] == 0) break; //dont print out the square null bytes
-      Serial.print(msg[i]);
-    }
-    Serial.println();
-    Serial.print("Hex: ");
-    for(size_t i=0;i<MAX_MESSAGE_LENGTH;i++) Serial.print(msg[i],HEX);
-    Serial.println();
-  #endif
-}
-
-void _print_hex(char val){
+void _printHex(char val){
   //Since Serial.print(hex_val, HEX) doesnt seem to work for single bytes
-  _print_hex_char(((uint8_t) val) >> 4);
-  _print_hex_char(((uint8_t) val) % 16);
+  _printHexChar(((uint8_t) val) >> 4);
+  _printHexChar(((uint8_t) val) % 16);
 }
 
-void _print_hex_char(uint8_t val){
+void _printHexChar(uint8_t val){
   switch(val){
     case 0:
       Serial.print("0"); break;

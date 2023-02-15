@@ -22,15 +22,6 @@
 //   to reverse, hold function button, will vibrate to indicate switch
 //   If no battery level response from controller after 5 retries, start vibrate to tell signal lost
 
-//pair feature:
-// set to address: 0 p a i r    which is    0x 00 50 41 49 52
-// controller randomly generates new address
-// send address to remote
-// controller -> remote transmission uses base address with the LSB=0
-// remote -> controller transmission uses base address with the LSB=1
-// both switch over if recieved, otherwise retry 10 times
-// if fail after 10 times, default to 0x 00 00 00 00 00
-
 //main loop
 // remote sends 7 bits representing a number from 0-128
 // last bit will be direction, 0 being forward 1 being backward
@@ -38,22 +29,46 @@
 // remote will send about ever 200ms, so about 5 updates per second
 // while waiting, remote will listen for battery/controller updates
 //    recieved information will be a 0-255 number containing battery levels
+
+//Nano has 30720 bytes of flash
+//          2048 bytes of ram
 #include "radioFunctions.h"
 #include "settings.h"
+#include "pair.h"
 
 char transmit_msg[MAX_MESSAGE_LENGTH];
 char* resp;
 
 void setup() {
-  radio_setup();
-  pinMode(A0,INPUT);
+  #ifdef CONTROLLER
+    pairController();
+  #elif defined(REMOTE)
+    pinMode(A0,INPUT);
+    if(analogRead(A0) <= 10){
+      pairRemote();
+    }
+    else{
+      radioSetup();
+      #ifdef DEBUG
+      Serial.begin(115200);
+      #endif
+    }
+  #endif
 }
 
 void loop(void){
-  itoa(analogRead(A0),transmit_msg,10);
-  transmit(transmit_msg);
-  if(recieve(100)){
-    printMsg();
-  }
+  #ifdef CONTROLLER
+    if(recieve(100)){
+      printMsg();
+    }
+  #elif defined(REMOTE)
+    itoa(analogRead(A0),transmit_msg,10);
+    transmit(transmit_msg);
+    Serial.print("Analog value: ");
+    Serial.println(analogRead(A0));
+    if(recieve(3000)){
+      printMsg();
+    }
+  #endif
 }
 

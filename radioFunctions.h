@@ -5,10 +5,19 @@
 #define RADIOECC_H
 
 //setup radio module
-void radio_setup();
+void radioSetup();
+
+//setup radio module to pair
+void radioSetupPair();
+
+//switch from the pair address to the saved EEPROM address
+void radioSetupSwitch();
+
+//stop all read/write operations
+void stopRadio();
 
 //transmits RS encoded data
-void transmit(char* message); 
+bool transmit(char* constmessage); 
 
 //recieve ECC transmission. Returns 0 on success, 1 on timeout
 int recieve(unsigned long timeout); 
@@ -18,9 +27,12 @@ char* getMsg();
 
 //only works if debug is defined
 void printMsg();
+void printMsg(int numBytes);
+
 
 //helper functions
-void _print_hex(char val);
-void _print_hex_char(uint8_t val);
+void _initNRF();
+void _printHex(char val);
+void _printHexChar(uint8_t val);
 
 #endif
