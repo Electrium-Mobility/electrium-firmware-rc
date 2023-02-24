@@ -40,6 +40,8 @@ char transmit_msg[MAX_MESSAGE_LENGTH];
 char* resp;
 
 void setup() {
+  SPI.begin();  //SPI0 used for the NRF
+  SPI1.begin(); //SPI1 used for the LCD screen
   #ifdef CONTROLLER
     pairController();
   #elif defined(REMOTE)

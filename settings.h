@@ -5,10 +5,10 @@
 
 #include "RF24.h"
 
-//------------- Which device is this on?  ----------------//
-//-- On auto set, the Arduino Nano will be the REMOTE.  --//
-//--     Otherwise it will default to controller        --//
-//--------------------------------------------------------//
+//------------- Which device is this on?  ------------------------//
+//-- On auto set, the Arduino Nano/Pi Pico will be the REMOTE.  --//
+//--         Otherwise it will default to controller            --//
+//----------------------------------------------------------------//
 #define AUTO_SET
 // #define CONTROLLER
 // #define REMOTE
@@ -18,8 +18,8 @@
 #define DEBUG
 
 // NRF pins
-#define CE_PIN 9
-#define CSN_PIN 8 
+#define CE_PIN 17
+#define CSN_PIN 14
 
 //Transmit level. Higher = more power usage
 // Options: RF24_PA_MIN | RF24_PA_LOW | RF24_PA_MED | RF24_PA_HIGH
@@ -57,7 +57,7 @@
 //You can change this from 0-5, but theres no reason to. This is just to not hard-code in a pipe channel
 #define PIPE_CHANNEL 1
 
-#if defined(AUTO_SET) && !defined(REMOTE) && !defined(CONTROLLER) && defined(ARDUINO_AVR_NANO)
+#if defined(AUTO_SET) && !defined(REMOTE) && !defined(CONTROLLER) && (defined(ARDUINO_AVR_NANO) || defined(ARDUINO_GENERIC_RP2040))
   #define REMOTE
 #elif defined(AUTO_SET) && !defined(REMOTE) && !defined(CONTROLLER)
   #define CONTROLLER
